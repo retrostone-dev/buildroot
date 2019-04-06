@@ -346,16 +346,18 @@ hdmi_mode_check = 1
 [disp_init]
 disp_init_enable = 1
 disp_mode = 1
-screen0_output_type = 3
-screen0_output_mode = 5
+screen0_output_type = 2
+screen0_output_mode = 14
 screen1_output_type = 2
 screen1_output_mode = 14
-fb0_format = 0
-fb0_width = 672
+fb0_format = 10
+fb0_width = 680
 fb0_height = 448
-fb1_format = 0
+fb0_framebuffer_num = 2
+fb1_format = 10
 fb1_width = 0
 fb1_height = 0
+fb1_framebuffer_num = 2
 
 [hdmi_para]
 hdmi_used = 0

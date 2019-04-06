@@ -1,6 +1,5 @@
 config BR2_PACKAGE_SDL2
 	bool "sdl2"
-	depends on !BR2_STATIC_LIBS
 	help
 	  Simple DirectMedia Layer 2 - SDL2 is a library that allows
 	  programs portable low level access to a video framebuffer,
@@ -55,6 +54,3 @@ comment "OpenGL ES support needs an OpenGL ES provider"
 	depends on !BR2_PACKAGE_HAS_LIBGLES
 
 endif
-
-comment "sdl2 needs a toolchain w/ dynamic library"
-	depends on BR2_STATIC_LIBS
