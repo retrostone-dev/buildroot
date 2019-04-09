@@ -1,0 +1,15 @@
+The Retrostone has 4 cores, let's take advantage of it
+by enabling Async blitting by default.
+
+--- a/src/video/fbcon/SDL_fbvideo.c
++++ b/src/video/fbcon/SDL_fbvideo.c
+@@ -1136,6 +1136,9 @@
+ 	} else {
+ 		current->flags |= SDL_HWSURFACE;
+ 	}
++	
++	current->flags |= SDL_ASYNCBLIT;
++	
+ 	current->w = vinfo.xres;
+ 	current->h = vinfo.yres;
+ 	if (shadow_fb) {
