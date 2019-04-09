@@ -51,44 +51,7 @@
 #include "SDL_fbvideo.h"
 #include "SDL_fbevents_c.h"
 
-#define SCANCODE_ESCAPE			1
-#define SCANCODE_3			4
-#define SCANCODE_BACKSPACE		14
-#define SCANCODE_TAB			15
-#define SCANCODE_ENTER			28
-#define SCANCODE_LEFTCONTROL		29
-#define SCANCODE_LEFTSHIFT		42
-#define SCANCODE_RIGHTSHIFT		54
-#define SCANCODE_LEFTALT		56
-#define SCANCODE_SPACE			57
-#define SCANCODE_CURSORUPLEFT		71
-#define SCANCODE_CURSORUP		72
-#define SCANCODE_CURSORUPRIGHT		73
-#define SCANCODE_CURSORLEFT		75
-#define SCANCODE_CURSORRIGHT		77
-#define SCANCODE_CURSORDOWNLEFT		79
-#define SCANCODE_CURSORDOWN		80
-#define SCANCODE_CURSORDOWNRIGHT	81
-#define SCANCODE_KEYPADENTER		96
-#define SCANCODE_RIGHTCONTROL		97
-#define SCANCODE_CONTROL		97
-#define SCANCODE_END			107
-#define NSP_NUMKEYS SCANCODE_END+1
-
-#define NSP_UPDATE_KEY_EVENT(s, sc, ks, kp) do { \
-	SDL_keysym keysym; \
-	keysym.scancode = sc; \
-	keysym.sym = s; \
-	if ( ks == SDL_RELEASED ) { \
-		if ( kp ) { \
-			SDL_PrivateKeyboard(SDL_PRESSED, &keysym); \
-			ks = SDL_PRESSED; \
-		} \
-	} else if ( ! kp ) { \
-		SDL_PrivateKeyboard(SDL_RELEASED, &keysym); \
-		ks = SDL_RELEASED; \
-	} \
-} while (0)
+#define NSP_NUMKEYS 14
 
 static uint32_t nspk_keymap[NSP_NUMKEYS];
 static uint32_t key_state[NSP_NUMKEYS];
@@ -97,31 +60,37 @@ static SDLKey sdlk_keymap[NSP_NUMKEYS];
 static int keyboard_fb_;
 static struct input_event data;
 
-static uint32_t returnkey(uint32_t key, uint32_t b)
-{
-	if (data.code == key)
-	{
-		if (b > 0 && data.value == 1)
-		{
-			return 1;
-		}
-	}
-	return 0;
-}
-
 static void Update_Keyboard(void)
 {
-	uint32_t i;
-	uint32_t bytes;
+	SDL_keysym keysym;
+	uint32_t i, bytes;
 	bytes = read(keyboard_fb_, &data, sizeof(data));
+	
+	if (!(bytes > 0))
+		return;
 	
 	for ( i = 0; i < NSP_NUMKEYS; ++i ) 
 	{
-		uint32_t key_pressed;
-		if ( sdlk_keymap[i] == SDLK_UNKNOWN )
-			continue;
-		key_pressed = returnkey(nspk_keymap[i], bytes);
-		NSP_UPDATE_KEY_EVENT(sdlk_keymap[i], nspk_keymap[i], key_state[i], key_pressed);
+		uint32_t key_pressed, ks;
+		if ( sdlk_keymap[i] != SDLK_UNKNOWN )
+		{
+			if (data.code == nspk_keymap[i])
+			{
+				if (data.value == 1 || data.value == 2)
+				{
+					key_pressed = 1;
+					ks = SDL_PRESSED;
+				}
+				else if (data.value == 0)
+				{
+					key_pressed = 0;
+					ks = SDL_RELEASED;
+				}
+				keysym.scancode = i;
+				keysym.sym = sdlk_keymap[i];
+				SDL_PrivateKeyboard(ks, &keysym);
+			}
+		}
 	}
 }
 
@@ -184,23 +153,23 @@ void FB_InitOSKeymap(_THIS)
 	}
 	
 	/* Enum value -> KEY_* */
-	nspk_keymap[SCANCODE_CURSORUP] =	KEY_UP;
-	nspk_keymap[SCANCODE_CURSORDOWN] =	KEY_DOWN;
-	nspk_keymap[SCANCODE_CURSORLEFT] =	KEY_LEFT;
-	nspk_keymap[SCANCODE_CURSORRIGHT] =	KEY_RIGHT;
+	nspk_keymap[0] =	KEY_UP;
+	nspk_keymap[1] =	KEY_DOWN;
+	nspk_keymap[2] =	KEY_LEFT;
+	nspk_keymap[3] =	KEY_RIGHT;
 	
-	nspk_keymap[SCANCODE_LEFTCONTROL] =	KEY_LEFTCTRL;
-	nspk_keymap[SCANCODE_LEFTALT] =	KEY_LEFTALT;
-	nspk_keymap[SCANCODE_LEFTSHIFT] =	KEY_LEFTSHIFT;
-	nspk_keymap[SCANCODE_SPACE] =	KEY_SPACE;
+	nspk_keymap[4] =	KEY_LEFTCTRL;
+	nspk_keymap[5] =	KEY_LEFTALT;
+	nspk_keymap[6] =	KEY_LEFTSHIFT;
+	nspk_keymap[7] =	KEY_SPACE;
 
-	nspk_keymap[SCANCODE_TAB] =	KEY_TAB;
-	nspk_keymap[SCANCODE_BACKSPACE] =	KEY_BACKSPACE;
-	nspk_keymap[SCANCODE_3] =	KEY_3;
-	nspk_keymap[SCANCODE_END] =	KEY_END;
+	nspk_keymap[8] =	KEY_TAB;
+	nspk_keymap[9] =	KEY_BACKSPACE;
+	nspk_keymap[10] =	KEY_3;
+	nspk_keymap[11] =	KEY_END;
 	
-	nspk_keymap[SCANCODE_ENTER] =	KEY_ENTER;
-	nspk_keymap[SCANCODE_ESCAPE] =	KEY_ESC;
+	nspk_keymap[12] =	KEY_ENTER;
+	nspk_keymap[13] =	KEY_ESC;
 	
 	keyboard_fb_ = open("/dev/input/event3", O_RDONLY | O_NONBLOCK);
 	if (!keyboard_fb_) 
@@ -214,23 +183,23 @@ void FB_InitOSKeymap(_THIS)
 	}
 
 	/* Enum value -> SDLK_* This is the actual key mapping part. */
-	sdlk_keymap[SCANCODE_CURSORUP] =	SDLK_UP;
-	sdlk_keymap[SCANCODE_CURSORDOWN] =	SDLK_DOWN;
-	sdlk_keymap[SCANCODE_CURSORLEFT] =	SDLK_LEFT;
-	sdlk_keymap[SCANCODE_CURSORRIGHT] =	SDLK_RIGHT;
+	sdlk_keymap[0] =	SDLK_UP;
+	sdlk_keymap[1] =	SDLK_DOWN;
+	sdlk_keymap[2] =	SDLK_LEFT;
+	sdlk_keymap[3] =	SDLK_RIGHT;
 	
-	sdlk_keymap[SCANCODE_LEFTCONTROL] =	SDLK_LCTRL;
-	sdlk_keymap[SCANCODE_LEFTALT] =	SDLK_LALT;
-	sdlk_keymap[SCANCODE_LEFTSHIFT] =	SDLK_LSHIFT;
-	sdlk_keymap[SCANCODE_SPACE] =	SDLK_SPACE;
+	sdlk_keymap[4] =	SDLK_LCTRL;
+	sdlk_keymap[5] =	SDLK_LALT;
+	sdlk_keymap[6] =	SDLK_LSHIFT;
+	sdlk_keymap[7] =	SDLK_SPACE;
 	
-	sdlk_keymap[SCANCODE_TAB] =	SDLK_TAB;
-	sdlk_keymap[SCANCODE_BACKSPACE] =	SDLK_BACKSPACE;
-	sdlk_keymap[SCANCODE_3] =	SDLK_3;
-	sdlk_keymap[SCANCODE_END] =	SDLK_END;
+	sdlk_keymap[8] =	SDLK_TAB;
+	sdlk_keymap[9] =	SDLK_BACKSPACE;
+	sdlk_keymap[10] =	SDLK_3;
+	sdlk_keymap[11] =	SDLK_END;
 	
-	sdlk_keymap[SCANCODE_ENTER] =	SDLK_RETURN;
-	sdlk_keymap[SCANCODE_ESCAPE] =	SDLK_ESCAPE;
+	sdlk_keymap[12] =	SDLK_RETURN;
+	sdlk_keymap[13] =	SDLK_ESCAPE;
 }
 
 /* end of SDL_tinspireevents.c ... */
