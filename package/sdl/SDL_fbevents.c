@@ -97,13 +97,11 @@ static SDLKey sdlk_keymap[NSP_NUMKEYS];
 static int keyboard_fb_;
 static struct input_event data;
 
-static uint32_t returnkey(uint32_t key)
+static uint32_t returnkey(uint32_t key, uint32_t b)
 {
-	uint32_t bytes;
-	bytes = read(keyboard_fb_, &data, sizeof(data));
 	if (data.code == key)
 	{
-		if (bytes > 0 && data.value == 1)
+		if (b > 0 && data.value == 1)
 		{
 			return 1;
 		}
@@ -114,14 +112,16 @@ static uint32_t returnkey(uint32_t key)
 static void Update_Keyboard(void)
 {
 	uint32_t i;
+	uint32_t bytes;
+	bytes = read(keyboard_fb_, &data, sizeof(data));
 	
 	for ( i = 0; i < NSP_NUMKEYS; ++i ) 
 	{
 		uint32_t key_pressed;
 		if ( sdlk_keymap[i] == SDLK_UNKNOWN )
 			continue;
-		key_pressed = returnkey(nspk_keymap[i]);
-		NSP_UPDATE_KEY_EVENT(sdlk_keymap[i], i, key_state[i], key_pressed);
+		key_pressed = returnkey(nspk_keymap[i], bytes);
+		NSP_UPDATE_KEY_EVENT(sdlk_keymap[i], nspk_keymap[i], key_state[i], key_pressed);
 	}
 }
 
@@ -179,7 +179,7 @@ void FB_InitOSKeymap(_THIS)
 	for (i=0;i<NSP_NUMKEYS;i++)
 	{
 		nspk_keymap[i] = 0;
-		sdlk_keymap[i] = 0;
+		sdlk_keymap[i] = SDLK_UNKNOWN;
 		key_state[i] = 0;	
 	}
 	
