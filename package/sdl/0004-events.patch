@@ -1,6 +1,6 @@
 --- a/src/video/fbcon/SDL_fbevents.c
 +++ b/src/video/fbcon/SDL_fbevents.c
-@@ -19,1236 +19,387 @@
+@@ -19,1236 +19,393 @@
      Sam Lantinga
      slouken@libsdl.org
  */
@@ -84,16 +84,17 @@
 +	ks = b; \
 +	keysym.scancode = i; \
 +	keysym.sym = sdlk_keymap[i]; \
-+	SDL_PrivateKeyboard(ks, &keysym); 
++	posted += SDL_PrivateKeyboard(ks, &keysym); \
 +
 +
 +static uint32_t nspk_keymap[NSP_NUMKEYS];
 +static SDLKey sdlk_keymap[NSP_NUMKEYS];
++static int32_t key_pressed[NSP_NUMKEYS];
 +
 +static int keyboard_fb_;
 +static struct input_event data;
-+static int32_t value[14];
-+static int32_t key_pressed[14];
++
++static int32_t posted = 0;
 +
 +enum
 +{
@@ -198,50 +199,6 @@
 -				/* fill keytemp. This replaces SDL_fbkeys.h */
 -				if ( (map == 0) && (i<128) ) {
 -					keymap_temp[i] = entry.kb_value;
--				}
--				/* The "Enter" key is a special case */
--				if ( entry.kb_value == K_ENTER ) {
--					entry.kb_value = K(KT_ASCII,13);
--				}
--				/* Handle numpad specially as well */
--				if ( KTYP(entry.kb_value) == KT_PAD ) {
--					switch ( entry.kb_value ) {
--					case K_P0:
--					case K_P1:
--					case K_P2:
--					case K_P3:
--					case K_P4:
--					case K_P5:
--					case K_P6:
--					case K_P7:
--					case K_P8:
--					case K_P9:
--						vga_keymap[map][i]=entry.kb_value;
--						vga_keymap[map][i]+= '0';
--						break;
--										case K_PPLUS:
--						vga_keymap[map][i]=K(KT_ASCII,'+');
--						break;
--										case K_PMINUS:
--						vga_keymap[map][i]=K(KT_ASCII,'-');
--						break;
--										case K_PSTAR:
--						vga_keymap[map][i]=K(KT_ASCII,'*');
--						break;
--										case K_PSLASH:
--						vga_keymap[map][i]=K(KT_ASCII,'/');
--						break;
--										case K_PENTER:
--						vga_keymap[map][i]=K(KT_ASCII,'\r');
--						break;
--										case K_PCOMMA:
--						vga_keymap[map][i]=K(KT_ASCII,',');
--						break;
--										case K_PDOT:
--						vga_keymap[map][i]=K(KT_ASCII,'.');
--						break;
--					default:
--						break;
 +static int sunxi_gpio_init() {
 +  
 +  int fd;
@@ -341,88 +298,105 @@
 +static void Update_Keyboard(void)
 +{
 +	int32_t ks, i;
++	int32_t value[14];
 +	SDL_keysym keysym;
-+
-+	value[0] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_UP));
-+	value[1] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_DOWN));
-+	value[2] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_LEFT));
-+	value[3] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_RIGHT));
-+	value[4] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_A));
-+	value[5] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_B));
-+	value[6] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_X));
-+	value[7] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_Y));
-+	value[8] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L));
-+	value[9] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R));
-+	value[10] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L2));
-+	value[11] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R2));
-+	value[12] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_START));
-+	value[13] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_SELECT));
 +	
-+	for ( i = 0; i < NSP_NUMKEYS; ++i ) 
++	do 
 +	{
-+		if ( sdlk_keymap[i] != SDLK_UNKNOWN )
++		value[0] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_UP));
++		value[1] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_DOWN));
++		value[2] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_LEFT));
++		value[3] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_RIGHT));
++		value[4] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_A));
++		value[5] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_B));
++		value[6] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_X));
++		value[7] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_Y));
++		value[8] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L));
++		value[9] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R));
++		value[10] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L2));
++		value[11] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R2));
++		value[12] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_START));
++		value[13] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_SELECT));
++		
++		posted = 0;
++		
++		for ( i = 0; i < NSP_NUMKEYS; ++i ) 
 +		{
-+			if (key_pressed[i] == 0 || key_pressed[i] == 1)
++			if ( sdlk_keymap[i] == SDLK_UNKNOWN )
 +			{
-+				if (key_pressed[i] == 0)
++				continue;
++			}
++			
++			switch(key_pressed[i])
++			{
++				case 0:
++				if (value[i] == 0)
 +				{
-+					if (value[i] == 0)
-+					{
-+						APPLY_KEY(1, SDL_PRESSED)
- 					}
++					APPLY_KEY(1, SDL_PRESSED)
  				}
+-				/* The "Enter" key is a special case */
+-				if ( entry.kb_value == K_ENTER ) {
+-					entry.kb_value = K(KT_ASCII,13);
++				break;
++				case 1:
++				if (value[i] == 1)
++				{
++					APPLY_KEY(2, SDL_RELEASED)
+ 				}
+-				/* Handle numpad specially as well */
+-				if ( KTYP(entry.kb_value) == KT_PAD ) {
+-					switch ( entry.kb_value ) {
+-					case K_P0:
+-					case K_P1:
+-					case K_P2:
+-					case K_P3:
+-					case K_P4:
+-					case K_P5:
+-					case K_P6:
+-					case K_P7:
+-					case K_P8:
+-					case K_P9:
+-						vga_keymap[map][i]=entry.kb_value;
+-						vga_keymap[map][i]+= '0';
+-						break;
+-										case K_PPLUS:
+-						vga_keymap[map][i]=K(KT_ASCII,'+');
+-						break;
+-										case K_PMINUS:
+-						vga_keymap[map][i]=K(KT_ASCII,'-');
+-						break;
+-										case K_PSTAR:
+-						vga_keymap[map][i]=K(KT_ASCII,'*');
+-						break;
+-										case K_PSLASH:
+-						vga_keymap[map][i]=K(KT_ASCII,'/');
+-						break;
+-										case K_PENTER:
+-						vga_keymap[map][i]=K(KT_ASCII,'\r');
+-						break;
+-										case K_PCOMMA:
+-						vga_keymap[map][i]=K(KT_ASCII,',');
+-						break;
+-										case K_PDOT:
+-						vga_keymap[map][i]=K(KT_ASCII,'.');
+-						break;
+-					default:
+-						break;
+-					}
+-				}
 -				/* Do the normal key translation */
 -				if ( (KTYP(entry.kb_value) == KT_LATIN) ||
 -					 (KTYP(entry.kb_value) == KT_ASCII) ||
 -					 (KTYP(entry.kb_value) == KT_LETTER) ) {
 -					vga_keymap[map][i] = entry.kb_value;
-+				else if (key_pressed[i] == 1)
-+				{
-+					if (value[i] == 1)
-+					{
-+						APPLY_KEY(2, SDL_RELEASED)
-+					}
- 				}
-+			}
-+			else if (key_pressed[i] == 2)
-+			{
-+				key_pressed[i] = 0;
-+				ks = 0;
- 			}
- 		}
- 	}
- }
- 
-+void FB_PumpEvents(_THIS)
-+{
-+	Update_Keyboard();
-+}
-+
-+int FB_OpenKeyboard(_THIS)
-+{
-+	return 0;
-+}
-+
-+int FB_EnterGraphicsMode(_THIS)
-+{
-+	return 0;
-+}
-+
-+int FB_OpenMouse(_THIS)
-+{
-+	return 0;
-+}
-+
-+void FB_CloseKeyboard(_THIS)
-+{
-+}
-+
-+void FB_CloseMouse(_THIS)
-+{
-+}
-+
- int FB_InGraphicsMode(_THIS)
- {
+-				}
+-			}
+-		}
+-	}
+-}
+-
+-int FB_InGraphicsMode(_THIS)
+-{
 -	return((keyboard_fd >= 0) && (saved_kbd_mode >= 0));
 -}
 -
@@ -485,19 +459,7 @@
 -		}
 -		/* Prevent switching the virtual terminal */
 -		ioctl(keyboard_fd, VT_LOCKSWITCH, 1);
-+	return 0;
-+}
-+
-+
-+void FB_InitOSKeymap(_THIS)
-+{
-+	uint32_t i;
-+	for (i=0;i<NSP_NUMKEYS;i++)
-+	{
-+		nspk_keymap[i] = 0;
-+		sdlk_keymap[i] = SDLK_UNKNOWN;
-+		key_pressed[i] = 0;
- 	}
+-	}
 -	return(keyboard_fd);
 -}
 -
@@ -798,9 +760,13 @@
 -		while ( select(fd+1, &fdset, 0, 0, &tv) > 0 ) {
 -			char temp[32];
 -			if (read(fd, temp, sizeof(temp)) <= 0) {
--				break;
--			}
--		}
++				break;
++				case 2:
++					key_pressed[i] = 0;
++					ks = 0;
+ 				break;
+ 			}
+ 		}
 -
 -		/* Query for the type of mouse protocol */
 -		if ( write(fd, &query_ps2, sizeof (query_ps2)) == sizeof (query_ps2)) {
@@ -826,7 +792,52 @@
 -				imps2 = 1;
 -			}
 -		}
--	}
++	} while ( posted );
++}
++
++void FB_PumpEvents(_THIS)
++{
++	Update_Keyboard();
++}
++
++int FB_OpenKeyboard(_THIS)
++{
++	return 0;
++}
++
++int FB_EnterGraphicsMode(_THIS)
++{
++	return 0;
++}
++
++int FB_OpenMouse(_THIS)
++{
++	return 0;
++}
++
++void FB_CloseKeyboard(_THIS)
++{
++}
++
++void FB_CloseMouse(_THIS)
++{
++}
++
++int FB_InGraphicsMode(_THIS)
++{
++	return 0;
++}
++
++
++void FB_InitOSKeymap(_THIS)
++{
++	uint32_t i;
++	for (i=0;i<NSP_NUMKEYS;i++)
++	{
++		nspk_keymap[i] = 0;
++		sdlk_keymap[i] = SDLK_UNKNOWN;
++		key_pressed[i] = 0;
+ 	}
 -	return imps2;
 -}
 -

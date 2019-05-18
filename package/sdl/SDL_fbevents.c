@@ -61,16 +61,17 @@
 	ks = b; \
 	keysym.scancode = i; \
 	keysym.sym = sdlk_keymap[i]; \
-	SDL_PrivateKeyboard(ks, &keysym); 
+	posted += SDL_PrivateKeyboard(ks, &keysym); \
 
 
 static uint32_t nspk_keymap[NSP_NUMKEYS];
 static SDLKey sdlk_keymap[NSP_NUMKEYS];
+static int32_t key_pressed[NSP_NUMKEYS];
 
 static int keyboard_fb_;
 static struct input_event data;
-static int32_t value[14];
-static int32_t key_pressed[14];
+
+static int32_t posted = 0;
 
 enum
 {
@@ -254,51 +255,56 @@ void emit(int fd, int type, int code, int val)
 static void Update_Keyboard(void)
 {
 	int32_t ks, i;
+	int32_t value[14];
 	SDL_keysym keysym;
-
-	value[0] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_UP));
-	value[1] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_DOWN));
-	value[2] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_LEFT));
-	value[3] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_RIGHT));
-	value[4] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_A));
-	value[5] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_B));
-	value[6] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_X));
-	value[7] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_Y));
-	value[8] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L));
-	value[9] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R));
-	value[10] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L2));
-	value[11] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R2));
-	value[12] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_START));
-	value[13] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_SELECT));
 	
-	for ( i = 0; i < NSP_NUMKEYS; ++i ) 
+	do 
 	{
-		if ( sdlk_keymap[i] != SDLK_UNKNOWN )
+		value[0] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_UP));
+		value[1] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_DOWN));
+		value[2] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_LEFT));
+		value[3] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', DPAD_RIGHT));
+		value[4] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_A));
+		value[5] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_B));
+		value[6] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_X));
+		value[7] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_Y));
+		value[8] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L));
+		value[9] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R));
+		value[10] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_L2));
+		value[11] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_R2));
+		value[12] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_START));
+		value[13] = sunxi_gpio_input(SUNXI_GPIO_PIN('D', BUTTON_SELECT));
+		
+		posted = 0;
+		
+		for ( i = 0; i < NSP_NUMKEYS; ++i ) 
 		{
-			if (key_pressed[i] == 0 || key_pressed[i] == 1)
+			if ( sdlk_keymap[i] == SDLK_UNKNOWN )
 			{
-				if (key_pressed[i] == 0)
-				{
-					if (value[i] == 0)
-					{
-						APPLY_KEY(1, SDL_PRESSED)
-					}
-				}
-				else if (key_pressed[i] == 1)
-				{
-					if (value[i] == 1)
-					{
-						APPLY_KEY(2, SDL_RELEASED)
-					}
-				}
+				continue;
 			}
-			else if (key_pressed[i] == 2)
+			
+			switch(key_pressed[i])
 			{
-				key_pressed[i] = 0;
-				ks = 0;
+				case 0:
+				if (value[i] == 0)
+				{
+					APPLY_KEY(1, SDL_PRESSED)
+				}
+				break;
+				case 1:
+				if (value[i] == 1)
+				{
+					APPLY_KEY(2, SDL_RELEASED)
+				}
+				break;
+				case 2:
+					key_pressed[i] = 0;
+					ks = 0;
+				break;
 			}
 		}
-	}
+	} while ( posted );
 }
 
 void FB_PumpEvents(_THIS)
