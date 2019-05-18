@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -26,7 +26,7 @@
+ 	include_directories(${ZLIB_INCLUDE_DIRS})
+ endif (ZLIB_FOUND)
+ 
+-add_library(opk SHARED libopk.c unsqfs.c opk.h unsqfs.h)
++add_library(opk STATIC libopk.c unsqfs.c opk.h unsqfs.h)
+ add_executable(opkinfo opkinfo.c)
+ add_executable(opkrun opkrun.c)
+ 

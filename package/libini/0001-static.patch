@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -22,7 +22,7 @@
+ 
+ add_definitions(-DLIBINI_EXPORTS=1)
+ 
+-add_library(ini SHARED ${LIBINI_CFILES} ${LIBINI_HEADERS})
++add_library(ini STATIC ${LIBINI_CFILES} ${LIBINI_HEADERS})
+ set_target_properties(ini PROPERTIES
+ 	VERSION ${PROJECT_VERSION}
+ 	SOVERSION ${PROJECT_VERSION_MAJOR}
