@@ -1,0 +1,26 @@
+--- a/libparted/fs/Makefile.am
++++ b/libparted/fs/Makefile.am
+@@ -72,7 +72,6 @@
+ libparted_fs_resize_la_DEPENDENCIES = $(sym_file)
+ 
+ libparted_fs_resize_la_SOURCES = \
+-  r/fat/bootsector.c		\
+   r/fat/bootsector.h		\
+   r/fat/calc.c			\
+   r/fat/calc.h			\
+@@ -82,7 +81,6 @@
+   r/fat/context.h		\
+   r/fat/count.c			\
+   r/fat/count.h			\
+-  r/fat/fat.c			\
+   r/fat/fat.h			\
+   r/fat/fatio.c			\
+   r/fat/fatio.h			\
+@@ -101,7 +99,6 @@
+   r/hfs/file.h			\
+   r/hfs/file_plus.c		\
+   r/hfs/file_plus.h		\
+-  r/hfs/hfs.c			\
+   r/hfs/hfs.h			\
+   r/hfs/journal.c		\
+   r/hfs/journal.h		\

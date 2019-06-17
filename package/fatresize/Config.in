@@ -1,0 +1,4 @@
+config BR2_PACKAGE_FATRESIZE
+	bool "fatresize"
+	help
+	  Resize FAT32 partition.
