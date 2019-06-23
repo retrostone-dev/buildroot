@@ -33,6 +33,7 @@ endif
 ifeq ($(BR2_PACKAGE_SDL2_DIRECTFB),y)
 SDL2_DEPENDENCIES += directfb
 SDL2_CONF_OPTS += --enable-video-directfb
+SDL2_CONF_OPTS += --enable-directfb-shared=no
 SDL2_CONF_ENV = ac_cv_path_DIRECTFBCONFIG=$(STAGING_DIR)/usr/bin/directfb-config
 else
 SDL2_CONF_OPTS += --disable-video-directfb
@@ -138,5 +139,7 @@ SDL2_CONF_OPTS += --enable-video-kmsdrm
 else
 SDL2_CONF_OPTS += --disable-video-kmsdrm
 endif
+
+SDL2_CONF_OPTS += --disable-video-dummy --disable-video-x11 --disable-video-opengl --disable-video-opengles2
 
 $(eval $(autotools-package))
